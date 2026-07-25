@@ -145,3 +145,22 @@ Requires: AWS credentials (SSO), Aurora connection, Cognito user pool.
 Built for H0: Hack the Zero Stack with Vercel v0 and AWS Databases · June 2026
 
 \#H0Hackathon
+
+## Pre-existing work disclosure
+
+Per the hackathon rules ("You may reuse pre-existing templates, 
+frameworks, boilerplates, or code, but you must clearly explain how 
+your project utilizes any pre-existing work"), this repository was 
+initialized from code developed prior to and during other hackathon 
+efforts: the InspectIQ application core (FastAPI backend, Next.js 
+frontend, multi-tenant PostgreSQL schema) and the InspectIQ agent 
+pipeline (Google ADK, Vertex AI). The imported state is tagged 
+`pre-existing-baseline`. Everything after that tag — the AI 
+business-operations layer (support, onboarding, billing 
+communications, and marketing agents with a unified agent execution 
+log), the Google Cloud production deployment (Cloud Run, Cloud SQL, 
+Secret Manager), Stripe billing integration, and the live business 
+operation itself (real customers, real revenue) — was created during 
+the Build with Gemini XPRIZE submission period. The diff between 
+`pre-existing-baseline` and `HEAD` constitutes the work performed 
+during the window.
