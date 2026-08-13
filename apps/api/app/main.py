@@ -9,6 +9,7 @@ from sqlalchemy import text
 logger = logging.getLogger(__name__)
 
 from app.config import settings
+from app.modules.agent_log.router import router as agent_log_router
 from app.modules.agreements.router import router as agreements_router
 from app.modules.findings.router import router as findings_router
 from app.modules.inspections.router import router as inspections_router
@@ -32,6 +33,7 @@ import app.modules.findings.models  # noqa: F401
 import app.modules.reports.models  # noqa: F401
 import app.modules.media.models  # noqa: F401
 import app.modules.observations.models  # noqa: F401
+import app.modules.agent_log.models  # noqa: F401
 
 app = FastAPI(title="MCAG Technologies API")
 app.add_middleware(TenantMiddleware)
@@ -54,6 +56,7 @@ app.include_router(findings_router)
 app.include_router(observations_router)
 app.include_router(reports_router)
 app.include_router(media_router)
+app.include_router(agent_log_router)
 
 
 @app.get("/health")

@@ -3,11 +3,16 @@ import uuid
 
 import boto3
 
+from botocore.client import Config
 from app.config import settings
 
 
 def get_s3_client():
-    return boto3.client("s3", region_name=settings.aws_region)
+    return boto3.client(
+        "s3", 
+        region_name=settings.aws_region,
+        config=Config(signature_version="s3v4"),
+    )
 
 
 def generate_upload_url(
