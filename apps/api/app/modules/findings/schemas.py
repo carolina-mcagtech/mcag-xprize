@@ -11,7 +11,7 @@ from app.modules.findings.models import Condition, Section
 _CONDITION_REQUIRED = frozenset({
     Section.FRONT, Section.EXTERIOR, Section.INSULATION, Section.PLUMBING,
     Section.STRUCTURAL, Section.ELECTRICAL, Section.ROOF, Section.KITCHEN,
-    Section.INTERIOR, Section.AIR_CONDITIONING, Section.BEDROOMS,
+    Section.INTERIOR, Section.AIR_CONDITIONING,,
 })
 
 # Sections where condition must be null
