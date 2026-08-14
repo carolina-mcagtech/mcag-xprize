@@ -39,6 +39,7 @@ _SECTION_LABELS: dict[str, str] = {
     "COST_ESTIMATION": "Cost Estimation",
     "COUNTY_INFO": "County Information",
     "BEDROOMS": "Bedrooms",
+    "BATHROOMS": "Bathrooms",
     "DISCLOSURE": "Disclosure",
 }
 
