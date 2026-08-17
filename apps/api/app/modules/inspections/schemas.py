@@ -58,6 +58,7 @@ class InspectionCreate(BaseModel):
 
     num_bedrooms: int = 0
     num_bathrooms: int = 0
+    num_half_bathrooms: int = 0
 
     wind_mit_doors_protected: bool = False
     wind_mit_windows_protected: bool = False
@@ -113,6 +114,7 @@ class InspectionUpdate(BaseModel):
 
     num_bedrooms: int | None = None
     num_bathrooms: int | None = None
+    num_half_bathrooms: int | None = None
 
     wind_mit_doors_protected: bool | None = None
     wind_mit_windows_protected: bool | None = None
@@ -175,6 +177,7 @@ class InspectionResponse(InspectionListResponse):
 
     num_bedrooms: int
     num_bathrooms: int
+    num_half_bathrooms: int
 
     wind_mit_doors_protected: bool
     wind_mit_windows_protected: bool

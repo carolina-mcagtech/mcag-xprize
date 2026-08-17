@@ -226,7 +226,7 @@ export function NewInspectionModal({
                 </Select.Root>
               </div>
               {/* Bedrooms & Bathrooms */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div className="flex flex-col gap-1.5">
                   <label htmlFor="numBedrooms" className={labelClass}>
                     Bedrooms
@@ -253,6 +253,20 @@ export function NewInspectionModal({
                     className={inputClass}
                     value={form.state.numBathrooms}
                     onChange={(e) => form.setField("numBathrooms", e.target.value)}
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="numHalfBathrooms" className={labelClass}>
+                    Half Baths
+                  </label>
+                  <input
+                    id="numHalfBathrooms"
+                    type="number"
+                    min={0}
+                    max={9}
+                    className={inputClass}
+                    value={form.state.numHalfBathrooms}
+                    onChange={(e) => form.setField("numHalfBathrooms", e.target.value)}
                   />
                 </div>
               </div>

@@ -15,6 +15,7 @@ export interface NewInspectionFormState {
   paymentTiming: PaymentTiming | ""
   numBedrooms: string
   numBathrooms: string
+  numHalfBathrooms: string
 }
 
 const INITIAL_STATE: NewInspectionFormState = {
@@ -25,6 +26,7 @@ const INITIAL_STATE: NewInspectionFormState = {
   paymentTiming: "",
   numBedrooms: "0",
   numBathrooms: "0",
+  numHalfBathrooms: "0",
 }
 
 function parseFee(raw: string): number {
@@ -83,6 +85,7 @@ export function useNewInspectionForm() {
       paymentTiming: state.paymentTiming as PaymentTiming,
       num_bedrooms: Math.max(0, parseInt(state.numBedrooms, 10) || 0),
       num_bathrooms: Math.max(0, parseInt(state.numBathrooms, 10) || 0),
+      num_half_bathrooms: Math.max(0, parseInt(state.numHalfBathrooms, 10) || 0),
     }
   }, [state, fee])
 

@@ -38,6 +38,7 @@ export interface NewInspectionPayload {
   paymentTiming: PaymentTiming
   num_bedrooms: number
   num_bathrooms: number
+  num_half_bathrooms: number
 }
 
 export interface Inspection {

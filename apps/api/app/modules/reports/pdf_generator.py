@@ -6,6 +6,7 @@ import weasyprint
 from jinja2 import Environment, select_autoescape
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.agent_log.service import log_agent_execution
 from app.modules.findings.models import Condition, Section
 from app.modules.findings.service import list_findings_by_inspection
 from app.modules.inspections.service import get_inspection
@@ -515,11 +516,13 @@ body {
 <div class="page-section">
   <div class="section-header">Property Details</div>
 
-  {% if inspection.year_built or inspection.adj_sqft or inspection.gate_code or inspection.lockbox %}
+  {% if inspection.year_built or inspection.adj_sqft or inspection.gate_code or inspection.lockbox or inspection.num_bedrooms or inspection.num_bathrooms %}
   <h3 class="subsection-title">Property Information</h3>
   <table class="detail-table">
     {% if inspection.year_built %}<tr><td>Year Built:</td><td>{{ inspection.year_built }}</td></tr>{% endif %}
     {% if inspection.adj_sqft %}<tr><td>Adjusted Sq Ft:</td><td>{{ inspection.adj_sqft }}</td></tr>{% endif %}
+    {% if inspection.num_bedrooms %}<tr><td>Bedrooms:</td><td>{{ inspection.num_bedrooms }}</td></tr>{% endif %}
+    {% if inspection.num_bathrooms or inspection.num_half_bathrooms %}<tr><td>Bathrooms:</td><td>{{ bathrooms_display }}</td></tr>{% endif %}
     {% if inspection.gate_code %}<tr><td>Gate Code:</td><td>{{ inspection.gate_code }}</td></tr>{% endif %}
     {% if inspection.lockbox %}<tr><td>Lockbox:</td><td>{{ inspection.lockbox }}</td></tr>{% endif %}
   </table>
@@ -770,13 +773,20 @@ def _datefmt(value: object) -> str:
     return str(value)
 
 
+def _format_bathrooms(num_bathrooms: int, num_half_bathrooms: int) -> str:
+    if num_half_bathrooms > 0:
+        total = num_bathrooms + num_half_bathrooms * 0.5
+        return f"{total:g} Baths"
+    return f"{num_bathrooms} Baths"
+
+
 _jinja_env.filters["datefmt"] = _datefmt
 
 
 async def _build_inspection_html(
     inspection_id: uuid.UUID,
     session: AsyncSession,
-) -> str:
+) -> tuple[str, dict]:
     inspection = await get_inspection(inspection_id, session)
     if inspection is None:
         raise ValueError(f"inspection {inspection_id} not found")
@@ -907,9 +917,13 @@ async def _build_inspection_html(
         inspection.hvac_brand, inspection.hvac_age,
         inspection.hvac_model, inspection.hvac_series,
     ])
+    bathrooms_display = _format_bathrooms(
+        inspection.num_bathrooms, inspection.num_half_bathrooms
+    )
     has_property_details = any([
         inspection.year_built, inspection.adj_sqft,
         inspection.gate_code, inspection.lockbox,
+        inspection.num_bedrooms, inspection.num_bathrooms,
         has_roof_data, has_water_heater_data,
         has_electrical_data, has_hvac_data,
         inspection.additional_notes,
@@ -954,17 +968,36 @@ async def _build_inspection_html(
         has_hvac_data=has_hvac_data,
         has_property_details=has_property_details,
         wind_mit_inspection=wind_mit_inspection,
+        bathrooms_display=bathrooms_display,
     )
 
-    return html
+    section_meta = {
+        "section_count": len(ordered_section_keys),
+        "sections_included": [_SECTION_LABELS.get(k, k) for k in ordered_section_keys],
+    }
+    return html, section_meta
 
 
 async def generate_full_inspection_pdf(
     inspection_id: uuid.UUID,
     session: AsyncSession,
 ) -> bytes:
-    html = await _build_inspection_html(inspection_id, session)
-    return weasyprint.HTML(string=html).write_pdf()
+    async with log_agent_execution(
+        session,
+        agent_name="report_generator",
+        trigger_type="user_request",
+        trigger_ref=str(inspection_id),
+        input_summary={"inspection_id": str(inspection_id), "template": "FULL"},
+    ) as entry:
+        html, section_meta = await _build_inspection_html(inspection_id, session)
+        entry.input_summary["section_count"] = section_meta["section_count"]
+        pdf_bytes = weasyprint.HTML(string=html).write_pdf()
+        entry.decision = "report_generated"
+        entry.output_summary = {
+            "pdf_size_bytes": len(pdf_bytes),
+            "sections_included": section_meta["sections_included"],
+        }
+    return pdf_bytes
 
 
 async def generate_full_inspection_html(
@@ -972,4 +1005,5 @@ async def generate_full_inspection_html(
     session: AsyncSession,
 ) -> str:
     """Return raw HTML before WeasyPrint conversion (debug only)."""
-    return await _build_inspection_html(inspection_id, session)
+    html, _ = await _build_inspection_html(inspection_id, session)
+    return html

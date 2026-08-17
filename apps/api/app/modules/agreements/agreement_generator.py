@@ -5,6 +5,7 @@ import weasyprint
 from jinja2 import Environment, select_autoescape
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.agent_log.service import log_agent_execution
 from app.modules.inspections.service import get_inspection
 from app.modules.tenants.service import get_tenant_by_id
 
@@ -426,56 +427,69 @@ async def generate_agreement_pdf(
     inspection_id: uuid.UUID,
     session: AsyncSession,
 ) -> bytes:
-    inspection = await get_inspection(inspection_id, session)
-    if inspection is None:
-        raise ValueError(f"inspection {inspection_id} not found")
+    async with log_agent_execution(
+        session,
+        agent_name="agreement_generator",
+        trigger_type="user_request",
+        trigger_ref=str(inspection_id),
+        input_summary={
+            "inspection_id": str(inspection_id),
+            "template": "PRE_INSPECTION_AGREEMENT",
+        },
+    ) as entry:
+        inspection = await get_inspection(inspection_id, session)
+        if inspection is None:
+            raise ValueError(f"inspection {inspection_id} not found")
 
-    tenant = await get_tenant_by_id(session)
-    theme: dict = tenant.theme_config if tenant and tenant.theme_config else {}
+        tenant = await get_tenant_by_id(session)
+        theme: dict = tenant.theme_config if tenant and tenant.theme_config else {}
 
-    brand_name: str = theme.get("brand_name") or (tenant.name if tenant else "Home Inspections")
-    inspector_name: str | None = theme.get("inspector_name")
-    license_number: str | None = theme.get("license_number")
-    email: str | None = theme.get("email")
-    phone: str | None = theme.get("phone")
-    mold_license: str | None = theme.get("mold_license")
-    nachi_license: str | None = theme.get("nachi_license")
+        brand_name: str = theme.get("brand_name") or (tenant.name if tenant else "Home Inspections")
+        inspector_name: str | None = theme.get("inspector_name")
+        license_number: str | None = theme.get("license_number")
+        email: str | None = theme.get("email")
+        phone: str | None = theme.get("phone")
+        mold_license: str | None = theme.get("mold_license")
+        nachi_license: str | None = theme.get("nachi_license")
 
-    raw_timing = (
-        inspection.payment_timing.value
-        if hasattr(inspection.payment_timing, "value")
-        else str(inspection.payment_timing or "")
-    )
-    timing_phrase, before_after = _PAYMENT_TIMING_LABELS.get(
-        raw_timing, ("at the property", "before")
-    )
+        raw_timing = (
+            inspection.payment_timing.value
+            if hasattr(inspection.payment_timing, "value")
+            else str(inspection.payment_timing or "")
+        )
+        timing_phrase, before_after = _PAYMENT_TIMING_LABELS.get(
+            raw_timing, ("at the property", "before")
+        )
 
-    from datetime import timezone
-    scheduled_dt = inspection.scheduled_at
-    if scheduled_dt.tzinfo is None:
-        scheduled_dt = scheduled_dt.replace(tzinfo=timezone.utc)
-    scheduled_day = scheduled_dt.strftime("%-d")
-    scheduled_month = scheduled_dt.strftime("%B")
-    scheduled_year = scheduled_dt.strftime("%Y")
+        from datetime import timezone
+        scheduled_dt = inspection.scheduled_at
+        if scheduled_dt.tzinfo is None:
+            scheduled_dt = scheduled_dt.replace(tzinfo=timezone.utc)
+        scheduled_day = scheduled_dt.strftime("%-d")
+        scheduled_month = scheduled_dt.strftime("%B")
+        scheduled_year = scheduled_dt.strftime("%Y")
 
-    template = _jinja_env.from_string(_HTML_TEMPLATE)
-    html = template.render(
-        inspection=inspection,
-        property_address=inspection.property_address,
-        total_fee=inspection.total_fee,
-        scheduled_day=scheduled_day,
-        scheduled_month=scheduled_month,
-        scheduled_year=scheduled_year,
-        payment_timing_phrase=timing_phrase,
-        payment_before_after=before_after,
-        brand_name=brand_name,
-        inspector_name=inspector_name,
-        license_number=license_number,
-        email=email,
-        phone=phone,
-        mold_license=mold_license,
-        nachi_license=nachi_license,
-    )
+        template = _jinja_env.from_string(_HTML_TEMPLATE)
+        html = template.render(
+            inspection=inspection,
+            property_address=inspection.property_address,
+            total_fee=inspection.total_fee,
+            scheduled_day=scheduled_day,
+            scheduled_month=scheduled_month,
+            scheduled_year=scheduled_year,
+            payment_timing_phrase=timing_phrase,
+            payment_before_after=before_after,
+            brand_name=brand_name,
+            inspector_name=inspector_name,
+            license_number=license_number,
+            email=email,
+            phone=phone,
+            mold_license=mold_license,
+            nachi_license=nachi_license,
+        )
 
-    pdf_bytes: bytes = weasyprint.HTML(string=html).write_pdf()
+        pdf_bytes: bytes = weasyprint.HTML(string=html).write_pdf()
+        entry.decision = "agreement_generated"
+        entry.output_summary = {"pdf_size_bytes": len(pdf_bytes)}
+
     return pdf_bytes
